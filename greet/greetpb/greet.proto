@@ -22,10 +22,24 @@ message GreetManyTimeResponse {
     string result = 1;
 }
 
+message GreetLongRequest{
+    Greeting greeting = 1;
+}
+
+message GreetLongResponse {
+    string result = 1;
+}
+
 service GreetService {
     // UNARY request
     rpc Greet (GreetRequest) returns (GreetResponse){};
 
     // Server Streaming
     rpc GreetManyTime (GreetManyTimeRequest) returns (stream GreetManyTimeResponse){};
+   
+    // Client Streaming
+    rpc LongGreet (stream GreetLongRequest) returns (GreetLongResponse){};
+
+    // Bi Derection Streaming
+    //rpc GreetEveryOne(stream GreetEveryOneRequest) returns (GreetEveryOneResponse){};
 }

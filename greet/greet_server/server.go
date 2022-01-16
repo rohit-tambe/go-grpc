@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -15,7 +16,7 @@ type server struct{}
 
 // Greet(context.Context, *GreetRequest) (*GreetResponse, error)
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
-	log.Println("Function invoke ", req.GetGreeting().FirstName)
+	log.Println("Function server streaming invoke ", req.GetGreeting().FirstName)
 	firstName := req.GetGreeting().GetFirstName()
 	result := "Hello " + firstName
 	res := &greetpb.GreetResponse{
@@ -30,6 +31,23 @@ func (*server) GreetManyTime(req *greetpb.GreetManyTimeRequest, stream greetpb.G
 		}
 		stream.Send(res)
 		time.Sleep(time.Second * 5)
+	}
+
+	return nil
+}
+
+func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
+	result := ""
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			res := &greetpb.GreetLongResponse{Result: result}
+			return stream.SendAndClose(res)
+		}
+		if err != nil {
+			return err
+		}
+		result += fmt.Sprintf("Hello %s\n", req.GetGreeting().GetFirstName())
 	}
 	return nil
 }

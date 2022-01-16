@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
 
 	"github.com/rohit-tambe/go-grpc/calculator/calculatorpb"
@@ -16,7 +18,41 @@ func main() {
 	defer conn.Close()
 	c := calculatorpb.NewCalculatorServiceClient(conn)
 	unaryCalculatorCall(c)
+	primeNumberDecompositionCall(c, 100)
+	computeAverage(c, 1, 2, 3, 4, 5, 6)
+}
 
+func computeAverage(c calculatorpb.CalculatorServiceClient, numbers ...int32) {
+	// ComputeAverage(ctx context.Context, opts ...grpc.CallOption) (CalculatorService_ComputeAverageClient, error)
+	stream, err := c.ComputeAverage(context.Background())
+	if err != nil {
+		log.Fatalf("error from ComputeAverage service %v ", err)
+	}
+	for _, number := range numbers {
+		req := &calculatorpb.ComputeAverageRequest{Number: number}
+		stream.Send(req)
+	}
+	response, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("error from ComputeAverage service %v ", err)
+	}
+	fmt.Println("Result from Client stream ComputeAverage ", response.GetResult())
+}
+
+func primeNumberDecompositionCall(c calculatorpb.CalculatorServiceClient, i int) {
+	req := &calculatorpb.PrimeNumberDecompositionRequest{Number: int32(2345654)}
+	stream, err := c.PrimeNumberDecomposition(context.Background(), req)
+	if err != nil {
+		log.Fatalf("error from PrimeNumberDecomposition service %v ", err)
+	}
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			log.Printf("we get all result %v", err)
+			return
+		}
+		log.Printf("Server streaming Prime Factor %v ", res.GetResult())
+	}
 }
 
 func unaryCalculatorCall(c calculatorpb.CalculatorServiceClient) {
@@ -28,5 +64,5 @@ func unaryCalculatorCall(c calculatorpb.CalculatorServiceClient) {
 	if err != nil {
 		log.Fatalf("error from Sum service %v ", err)
 	}
-	log.Println("Result ", res.Result)
+	log.Println("Sum unery call Result ", res.Result)
 }

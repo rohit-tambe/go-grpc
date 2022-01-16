@@ -11,7 +11,25 @@ message SumRequest {
 message SumRepsonse {
     int32 result = 1;
 }
-
+message PrimeNumberDecompositionRequest{
+    int32 number = 1;
+}
+message PrimeNumberDecompositionResponse{
+    int32 result = 1;
+}
+message ComputeAverageRequest{
+    int32 number = 1;
+}
+message ComputeAverageResponse{
+    double result = 1;
+}
 service CalculatorService {
+    // Unery sum service
     rpc Sum (SumRequest) returns (SumRepsonse){};
+    
+     // Server Streaming
+    rpc PrimeNumberDecomposition (PrimeNumberDecompositionRequest) returns (stream  PrimeNumberDecompositionResponse){};
+     
+    // Client Streaming
+    rpc ComputeAverage (stream ComputeAverageRequest) returns (ComputeAverageResponse){};
 }
