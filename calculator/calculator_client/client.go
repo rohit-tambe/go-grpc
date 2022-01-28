@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/rohit-tambe/go-grpc/calculator/calculatorpb"
 	"google.golang.org/grpc"
 )
+
+var wg sync.WaitGroup
 
 func main() {
 	conn, err := grpc.Dial("localhost:40019", grpc.WithInsecure())
@@ -17,9 +21,51 @@ func main() {
 	}
 	defer conn.Close()
 	c := calculatorpb.NewCalculatorServiceClient(conn)
-	unaryCalculatorCall(c)
-	primeNumberDecompositionCall(c, 100)
-	computeAverage(c, 1, 2, 3, 4, 5, 6)
+	// unaryCalculatorCall(c)
+	// primeNumberDecompositionCall(c, 100)
+	// computeAverage(c, 1, 2, 3, 4, 5, 6)
+	findMaximum(c, 1, 2, 3, 4, 5, 6)
+}
+
+func findMaximum(c calculatorpb.CalculatorServiceClient, numbers ...int32) {
+	stream, err := c.FindMaximumValue(context.Background())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		for _, value := range numbers {
+			err = stream.Send(&calculatorpb.FindMaximumValueRequest{Number: value})
+			if err != nil {
+				wg.Done()
+				log.Println("Send findMaximum err ", err)
+				return
+			}
+			time.Sleep(time.Second * 2)
+		}
+		err = stream.CloseSend()
+		if err != nil {
+			wg.Done()
+			log.Println("CloseSend findMaximum err ", err)
+		}
+	}(&wg)
+	go func(wg *sync.WaitGroup) {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				log.Println("Recv findMaximum  ", res.Result)
+				wg.Done()
+				return
+			}
+			if err != nil {
+				wg.Done()
+				log.Println("Recv findMaximum err ", err)
+				return
+			}
+		}
+	}(&wg)
+	wg.Wait()
 }
 
 func computeAverage(c calculatorpb.CalculatorServiceClient, numbers ...int32) {

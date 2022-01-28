@@ -10,6 +10,8 @@ import (
 
 	"github.com/rohit-tambe/go-grpc/greet/greetpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type server struct{}
@@ -17,6 +19,14 @@ type server struct{}
 // Greet(context.Context, *GreetRequest) (*GreetResponse, error)
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
 	log.Println("Function server streaming invoke ", req.GetGreeting().FirstName)
+	for i := 0; i < 3; i++ {
+		if ctx.Err() == context.Canceled {
+			//client cancele the request
+			log.Println("client cancele the request")
+			return nil, status.Error(codes.Canceled, "client cancele the request")
+		}
+		time.Sleep(time.Second * 1)
+	}
 	firstName := req.GetGreeting().GetFirstName()
 	result := "Hello " + firstName
 	res := &greetpb.GreetResponse{
@@ -49,9 +59,25 @@ func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
 		}
 		result += fmt.Sprintf("Hello %s\n", req.GetGreeting().GetFirstName())
 	}
-	return nil
 }
+func (*server) GreetEveryOne(stream greetpb.GreetService_GreetEveryOneServer) error {
 
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return err
+		}
+		if err != nil {
+			return err
+		}
+		log.Println("bidi server request ", req.GetGreeting().GetFirstName())
+		result := "Hello " + req.GetGreeting().GetFirstName() + " " + req.GetGreeting().GetLastName()
+		err = stream.Send(&greetpb.GreetEveryOneResponse{Result: result})
+		if err != nil {
+			return err
+		}
+	}
+}
 func main() {
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {
