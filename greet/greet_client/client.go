@@ -23,44 +23,52 @@ func main() {
 	}
 	defer conn.Close()
 	c := greetpb.NewGreetServiceClient(conn)
-	uneryChan := make(chan bool)
+	// uneryChan := make(chan bool)
 	// serverChan := make(chan bool)
 	// clientChan := make(chan bool)
 	// bidiChan := make(chan bool)
-	go unaryGrpcCall(c, uneryChan, 5)
-	go unaryGrpcCall(c, uneryChan, 1)
+	result := make(chan string)
+	// go unaryGrpcCall(c, uneryChan, 5)
+	// go unaryGrpcCall(c, uneryChan, 1)
 	// go serverStreamGrpcCall(c, serverChan)
 	// go clientStreaming(c, clientChan)
-	// go bidiStreaming(c, bidiChan)
-	<-uneryChan
+	go bidiStreaming(c, result)
+	// <-bidiChan
+	for v := range result {
+		fmt.Println("Result from Bidi => ", v)
+	}
+
 	// <-serverChan
 	// <-clientChan
 	// <-bidiChan
 }
 
-func bidiStreaming(c greetpb.GreetServiceClient, bidiChan chan bool) {
+func bidiStreaming(c greetpb.GreetServiceClient, result chan string) {
 	stream, err := c.GreetEveryOne(context.Background())
 	if err != nil {
-		bidiChan <- true
+		// bidiChan <- true
+
 		log.Printf("error from greet many time service response %v", err)
 	}
 	requests := []*greetpb.GreetEveryOneRequest{
 		{
-			Greeting: &greetpb.Greeting{FirstName: "Sam", LastName: "BiDi"},
+			Greeting: &greetpb.Greeting{FirstName: "Sam", LastName: "BiDi1"},
 		},
 		{
-			Greeting: &greetpb.Greeting{FirstName: "Alexa", LastName: "BiDi"},
+			Greeting: &greetpb.Greeting{FirstName: "Alexa", LastName: "BiDi1"},
 		},
 		{
-			Greeting: &greetpb.Greeting{FirstName: "Holand", LastName: "BiDi"},
+			Greeting: &greetpb.Greeting{FirstName: "Holand", LastName: "BiDi1"},
 		},
 		{
-			Greeting: &greetpb.Greeting{FirstName: "Tom", LastName: "BiDi"},
+			Greeting: &greetpb.Greeting{FirstName: "Tom", LastName: "BiDi1"},
+		},
+		{
+			Greeting: &greetpb.Greeting{FirstName: "Rohit", LastName: "BiDi1"},
 		},
 	}
 
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
+	go func() {
 
 		for _, req := range requests {
 			err = stream.Send(req)
@@ -74,24 +82,29 @@ func bidiStreaming(c greetpb.GreetServiceClient, bidiChan chan bool) {
 		if err != nil {
 			log.Printf("CloseSend error from greet many bidi time service response %v", err)
 		}
-	}(&wg)
-	func(wg *sync.WaitGroup) {
+	}()
+	// wg.Add(1)
+	func() {
 		for {
 			res, err := stream.Recv()
 			if err == io.EOF {
-				wg.Done()
+				// wg.Done()
+				close(result)
 				break
 			}
 			if err != nil {
-				wg.Done()
+				// wg.Done()
+				close(result)
 				log.Printf("Recve rror from greet many time bidi service response %v", err)
 				break
 			}
-			fmt.Println("Recieved BIDI streaming result ", res.GetResult())
+			// fmt.Println("Recieved BIDI streaming result ", res.GetResult())
+			result <- res.GetResult()
 		}
-	}(&wg)
-	bidiChan <- true
-	wg.Wait()
+	}()
+	// bidiChan <- true
+	// close(result)
+	// wg.Wait()
 }
 
 func serverStreamGrpcCall(c greetpb.GreetServiceClient, ch chan bool) {

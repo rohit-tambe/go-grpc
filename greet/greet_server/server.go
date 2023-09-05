@@ -14,7 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type server struct{}
+type server struct {
+	greetpb.UnimplementedGreetServiceServer
+}
 
 // Greet(context.Context, *GreetRequest) (*GreetResponse, error)
 func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.GreetResponse, error) {
@@ -31,6 +33,25 @@ func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.G
 	result := "Hello " + firstName
 	res := &greetpb.GreetResponse{
 		Result: result,
+	}
+	return res, nil
+}
+
+// SayHelloName(context.Context, *GreetRequest) (*GreetResponse, error)
+func (*server) SayHelloName(ctx context.Context, req *greetpb.SayHello) (*greetpb.SayHello, error) {
+	log.Println("Function server streaming invoke ", req.GetFirstName())
+	for i := 0; i < 3; i++ {
+		if ctx.Err() == context.Canceled {
+			//client cancele the request
+			log.Println("client cancele the request")
+			return nil, status.Error(codes.Canceled, "client cancele the request")
+		}
+		time.Sleep(time.Second * 1)
+	}
+	firstName := req.GetFirstName()
+	result := "Hello " + firstName
+	res := &greetpb.SayHello{
+		FirstName: result,
 	}
 	return res, nil
 }

@@ -4,6 +4,9 @@ package greet;
 
 option go_package = "greet/greetpb";
 
+message SayHello {
+    string first_name = 1;
+}
 message Greeting {
     string first_name = 1;
     string last_name = 2;
@@ -39,6 +42,9 @@ message GreetEveryOneResponse {
 service GreetService {
     // UNARY request
     rpc Greet (GreetRequest) returns (GreetResponse){};
+
+    // UNARY request
+    rpc SayHelloName (SayHello) returns (SayHello){};
 
     // Server Streaming
     rpc GreetManyTime (GreetManyTimeRequest) returns (stream GreetManyTimeResponse){};
